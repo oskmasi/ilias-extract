@@ -3,7 +3,6 @@ use anyhow::{anyhow, Context, Result};
 use calamine::{DataType, Reader, Xlsx};
 use chrono::NaiveDateTime;
 use std::collections::HashMap;
-use std::ops::Index;
 use std::path::Path;
 
 /// A row in the Excel spreadsheet
