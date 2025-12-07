@@ -1,6 +1,7 @@
 use crate::submission::IliasTeam;
 use crate::IliasConfiguration;
 use anyhow::{anyhow, bail, Context, Result};
+use colored::Colorize;
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs::{create_dir_all, File};
@@ -31,7 +32,7 @@ impl IliasExtractor
     }
 
     /// Performs the action
-    pub fn extract(mut self, configuration: &IliasConfiguration) -> Result<()>
+    pub fn extract(mut self, configuration: &IliasConfiguration) -> Result<usize>
     {
         // Target folders for each team
         let mut folders: HashMap<i32, PathBuf> = HashMap::new();
@@ -60,7 +61,11 @@ impl IliasExtractor
                 let markdown = team.generate_summary();
                 if configuration.verbose
                 {
-                    println!("Team {}: Creating summary file at {}", team_id, summary_file.display());
+                    println!(
+                        "{}: Creating summary file at {}",
+                        format!("Team {}", team_id).bright_green().bold().underline(),
+                        summary_file.display().to_string().yellow()
+                    );
                 }
                 File::create(&summary_file)?.write_all(markdown.as_bytes())?;
             }
@@ -69,6 +74,7 @@ impl IliasExtractor
         }
 
         // Then iterate over contents of zip file
+        let mut copied_files: usize = 0;
         let submission_regex = Regex::new(r"(?m)^([^/]+)/([a-zA-Z]+)/Team ([0-9]+)/([^/]+)/([^.]+).([a-zA-Z]+)$")?;
         for (path, index) in self.archive_index
         {
@@ -83,16 +89,22 @@ impl IliasExtractor
                 let target_path = target_folder.join(format!("{}.{}", name, ext));
                 if configuration.verbose
                 {
-                    println!("Team {}: Extracting {} to {}", team_id, path_str, target_path.display());
+                    println!(
+                        "{}: Extracting {} to {}",
+                        format!("Team {}", team_id).bright_green().bold().underline(),
+                        path_str.yellow(),
+                        target_path.display().to_string().yellow()
+                    );
                 }
                 let mut target_file = match configuration.overwrite
                 {
                     true => File::create(&target_path),
                     false => File::create_new(&target_path)
-                }.with_context(|| format!("Unable to create new file: {}, consider using --purge or --overwrite", &target_path.display()))?;
+                }.with_context(|| format!("Unable to create new file: {}, consider using --purge or --overwrite", &target_path.display()).bright_red())?;
                 io::copy(&mut file, &mut target_file)?;
+                copied_files += 1;
             }
         }
-        Ok(())
+        Ok(copied_files)
     }
 }

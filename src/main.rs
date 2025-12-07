@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::fs::{remove_dir_all, File};
 use std::io;
 use std::path::PathBuf;
+use colored::Colorize;
 use zip::ZipArchive;
 
 #[derive(Parser, Debug)]
@@ -89,5 +90,7 @@ fn main() -> Result<()>
 
     let teams: HashMap<i32, IliasTeam> = metadata_file.unwrap().into();
     let extractor = IliasExtractor::new(teams, zip, content);
-    extractor.extract(&args)
+    let copied_files = extractor.extract(&args)?;
+    println!("\n\t{} {} {}\n", "DONE".bright_green().bold().underline(), "Files extracted:".bright_white(), copied_files.to_string().bright_green());
+    Ok(())
 }
