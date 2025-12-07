@@ -69,7 +69,7 @@ impl IliasExtractor
         }
 
         // Then iterate over contents of zip file
-        let submission_regex = Regex::new(r"(?m)^([^/]+)/Abgaben/Team ([0-9]+)/([^/]+)/([^.]+).([a-zA-Z]+)$")?;
+        let submission_regex = Regex::new(r"(?m)^([^/]+)/([a-zA-Z]+)/Team ([0-9]+)/([^/]+)/([^.]+).([a-zA-Z]+)$")?;
         for (path, index) in self.archive_index
         {
             let mut file = self.archive.by_index(index)?;
@@ -77,7 +77,7 @@ impl IliasExtractor
             if let Some(captures) = submission_regex.captures(path_str)
             {
                 // This path matches the regex
-                let (_, [_, team_str, _, name, ext]) = captures.extract();
+                let (_, [_, _, team_str, _, name, ext]) = captures.extract();
                 let team_id = team_str.parse::<i32>()?;
                 let target_folder = folders.get(&team_id).ok_or_else(|| anyhow!("Unable to find entry for team: {}", &team_id))?;
                 let target_path = target_folder.join(format!("{}.{}", name, ext));
