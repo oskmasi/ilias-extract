@@ -36,7 +36,7 @@ output/
 Build from source using Cargo:
 
 ```bash
-git clone https://github.com/yourusername/ilias-extract.git
+git clone https://github.com/oskmasi/ilias-extract.git
 cd ilias-extract
 cargo build --release
 ```
