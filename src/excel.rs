@@ -1,8 +1,9 @@
 use crate::submission::{IliasStudent, IliasSubmission, IliasTeam};
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use calamine::{DataType, Reader, Xlsx};
 use chrono::NaiveDateTime;
 use std::collections::HashMap;
+use std::ops::Index;
 use std::path::Path;
 
 /// A row in the Excel spreadsheet
@@ -17,36 +18,36 @@ struct IliasRow
     files: Vec<String>,
 }
 
-impl Into<IliasStudent> for &IliasRow
+impl From<&IliasRow> for IliasStudent
 {
-    fn into(self) -> IliasStudent
+    fn from(row: &IliasRow) -> Self
     {
         IliasStudent {
-            surname: self.surname.clone(),
-            name: self.name.clone(),
-            login_name: self.login_name.clone(),
+            surname: row.surname.clone(),
+            name: row.name.clone(),
+            login_name: row.login_name.clone(),
         }
     }
 }
 
-impl Into<Vec<IliasSubmission>> for &IliasRow
+impl From<&IliasRow> for Vec<IliasSubmission>
 {
-    fn into(self) -> Vec<IliasSubmission>
+    fn from(row: &IliasRow) -> Self
     {
-        self.files.iter()
-            .map(|str| IliasSubmission { timestamp: self.timestamp.clone(), file_name: str.to_string() })
+        row.files.iter()
+            .map(|str| IliasSubmission { timestamp: row.timestamp.clone(), file_name: str.to_string() })
             .collect()
     }
 }
 
-impl Into<IliasTeam> for &IliasRow
+impl From<&IliasRow> for IliasTeam
 {
-    /// Turns this row into a team with one student already present
-    fn into(self) -> IliasTeam {
+    fn from(row: &IliasRow) -> Self
+    {
         IliasTeam {
-            id: self.team_id.clone(),
-            submissions: self.into(),
-            members: vec![self.into()]
+            id: row.team_id.clone(),
+            submissions: row.into(),
+            members: vec![row.into()]
         }
     }
 }
@@ -80,11 +81,13 @@ impl IliasMetadataFile
             }
             let metadata = IliasRow
             {
-                surname:    row[0].get_string().unwrap_or_default().to_string(),
-                name:       row[1].get_string().unwrap_or_default().to_string(),
-                login_name: row[2].get_string().unwrap_or_default().to_string(),
-                timestamp:  NaiveDateTime::parse_from_str(row[3].get_string().unwrap_or_default(), "%Y-%m-%d %H:%M:%S")?,
-                team_id:    row[4].get_float().unwrap_or_default() as i32, // I do not know why this is a float??
+                surname:    row[0].get_string().ok_or_else(|| anyhow!("Missing surname in spreadsheet"))?.to_string(),
+                name:       row[1].get_string().ok_or_else(|| anyhow!("Missing name in spreadsheet"))?.to_string(),
+                login_name: row[2].get_string().ok_or_else(|| anyhow!("Missing login name in spreadsheet"))?.to_string(),
+                timestamp:  NaiveDateTime::parse_from_str(
+                    row[3].get_string().ok_or_else(|| anyhow!("Missing timestamp in spreadsheet"))?,
+                    "%Y-%m-%d %H:%M:%S").with_context(|| "Malformed timestamp in spreadsheet")?,
+                team_id:    row[4].get_float().ok_or_else(|| anyhow!("Missing team id in spreadsheet"))? as i32, // I do not know why this is a float??
                 files
             };
             records.push(metadata);
@@ -93,13 +96,12 @@ impl IliasMetadataFile
     }
 }
 
-impl Into<HashMap<i32, IliasTeam>> for IliasMetadataFile
+impl From<IliasMetadataFile> for HashMap<i32, IliasTeam>
 {
-    /// Generates the team structure from this file
-    fn into(self) -> HashMap<i32, IliasTeam>
+    fn from(file: IliasMetadataFile) -> Self
     {
         let mut teams: HashMap<i32, IliasTeam> = HashMap::new();
-        for record in self.records
+        for record in file.records
         {
             if !teams.contains_key(&record.team_id)
             {
