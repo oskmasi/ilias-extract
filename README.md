@@ -82,3 +82,5 @@ ilias-extract <INPUT_ZIP> <OUTPUT_DIR> [OPTIONS]
 
 Contributions, issues, and feature requests are welcome!
 Feel free to fork the repo and submit a pull request.
+
+Transparency: This README.md has been AI-generated. The code is entirely human though
